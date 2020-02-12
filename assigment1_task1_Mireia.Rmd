@@ -48,33 +48,43 @@ library(here) #constructs paths to your project's files
 library(tidyverse) #data wrangling
 library(kableExtra) #to make html tables
 library(skimr) #for summarizing the data
+library(lubridate)#change dates
 ```
 
 ##Loading the data
 ```{r}
-snowshoes <- read_csv(here("task1", "showshoe_lter.csv"))
+snowshoes <- read_csv("task1/showshoe_lter.csv")
+#snowshoes <- read_csv(here("task1", "showshoe_lter.csv"))
 ```
 
 ##Exploring the data
+
+Summarizing
 ```{r}
 head(snowshoes)
-summary (snowshoes)
+summary(snowshoes)
 unique(snowshoes$grid)
 skim(snowshoes)
-
 ```
-##Creating new column from existing column
+Clean up names
 ```{r}
-snowshoes_year <- snowshoes %>% 
-  mutate(year = substring(date, 6,8))
+snowshoes_clean <- snowshoes %>% 
+  mutate(grid = str_to_lower(grid)) 
 ```
-##Cleaning non numeric characters from the new column
+Looking to changes
 ```{r}
-snowshoes_year_parsed<- snowshoes_year %>% 
-    parse_number()
+summary(snowshoes_clean)
+unique(snowshoes_clean$grid)
+skim(snowshoes_clean)
+```
+Convert `date` column to date with `lubridate`
+```{r}
+snowshoes_clean_date <- snowshoes_clean %>% 
+  mutate(yr_mo_day = lubridate::parse_date_time(date, "%m/%d/%y"))
+
+class(snowshoes_clean_date$yr_mo_day)
 ```
 
-class(snowshoes$date)
 
 -	One finalized HTML table (probably created using kable & kableExtra) containing summary statistics about the snowshoe hares (again, you pick which variables, and how you want to group/summarize them)
 
