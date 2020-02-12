@@ -57,7 +57,7 @@ snowshoes <- read_csv("task1/showshoe_lter.csv")
 #snowshoes <- read_csv(here("task1", "showshoe_lter.csv"))
 ```
 
-##Exploring the data
+##Exploring and wrangling the data
 
 Summarizing
 ```{r}
@@ -84,6 +84,7 @@ snowshoes_clean_date <- snowshoes_clean %>%
 
 class(snowshoes_clean_date$yr_mo_day)
 ```
+## Visualizing
 
 
 -	One finalized HTML table (probably created using kable & kableExtra) containing summary statistics about the snowshoe hares (again, you pick which variables, and how you want to group/summarize them)
