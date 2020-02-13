@@ -8,10 +8,10 @@ editor_options:
 ---
 
 ```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE)
+knitr::opts_chunk$set(echo = TRUE, message = FALSE, warning = FALSE)
 ```
 
-#**Task 1 (individual): Data wrangling & visualization (showshoe hares)**
+# **Task 1 (individual): Data wrangling & visualization (showshoe hares)**
 
 For Task 1 you will wrangle, then create a final visualization and summary table, of physical characteristics for snowshoe hares observed in Bonanza Creek Experimental Forest. 
 
@@ -42,58 +42,135 @@ Snowshoe hares, *Lepus americanus*, are a 'keystone' prey species in northern bo
 
 -	One finalized graph about the Bonanza Creek snowshoe hare population (you pick which variables, how you want to wrangle it beforehand, and which type of visual to create - but make sure it is beautifully finalized)
 
-##Load libraries
+## Load libraries
 ```{r}
 library(here) #constructs paths to your project's files 
 library(tidyverse) #data wrangling
 library(kableExtra) #to make html tables
 library(skimr) #for summarizing the data
 library(lubridate)#change dates
+library(naniar)#to explore missing values
+library(VIM)#to explore missing values
 ```
 
-##Loading the data
+## Loading the data
+
 ```{r}
 snowshoes <- read_csv("task1/showshoe_lter.csv")
 #snowshoes <- read_csv(here("task1", "showshoe_lter.csv"))
 ```
 
-##Exploring and wrangling the data
+## Exploring and wrangling the data
 
 Summarizing
 ```{r}
 head(snowshoes)
 summary(snowshoes)
 unique(snowshoes$grid)
+unique(snowshoes$sex)
 skim(snowshoes)
 ```
-Clean up names
+Clean up: 
+1) names of the species and sex columns to lowercase
 ```{r}
 snowshoes_clean <- snowshoes %>% 
-  mutate(grid = str_to_lower(grid)) 
+    mutate(
+      grid = str_to_lower(grid),
+      sex = str_to_lower(sex))
 ```
-Looking to changes
-```{r}
-summary(snowshoes_clean)
-unique(snowshoes_clean$grid)
-skim(snowshoes_clean)
-```
-Convert `date` column to date with `lubridate`
+2) convert `date` column to yr_mo_day and create new column with year with `lubridate`
 ```{r}
 snowshoes_clean_date <- snowshoes_clean %>% 
-  mutate(yr_mo_day = lubridate::parse_date_time(date, "%m/%d/%y"))
-
-class(snowshoes_clean_date$yr_mo_day)
+  mutate(yr_mo_day = lubridate::parse_date_time(date, "%m/%d/%y")) %>% 
+  mutate(year = year(yr_mo_day))
 ```
+Exploring the results
+```{r}
+unique(snowshoes_clean_date$grid)
+unique(snowshoes_clean_date$sex)
+```
+3) convert `grid` column to species
+```{r}
+snowshoes_clean_species <- snowshoes_clean_date %>% 
+  mutate(species = "Lepus americanus")
+```
+
+Selecting only f and m sex classes
+```{r}
+snowshoes_clean_sex <- snowshoes_clean_species %>% 
+    filter(sex == "f" | sex == "m")
+```
+Exploring the results
+```{r}
+unique(snowshoes_clean_sex$sex)
+```
+Exploring NA's using naniar::gg_miss_var()
+```{r}
+gg_miss_var(snowshoes_clean_sex)
+```
+Use tidyr::drop_na() to keep complete cases 
+```{r}
+snowshoes_final <- snowshoes_clean_sex %>% 
+  drop_na(weight)
+```
+Select columns that we want to keep for visualization
+```{r}
+snowshoes_final <- snowshoes_final %>% 
+  select(sex, weight, date, year)
+```
+
+## Create new data for visualization
+
+```{r}
+snowshoes_count <- snowshoes_final %>% 
+  group_by(year, sex) %>% 
+  summarize(n = n())
+
+snowshoes_weigth <- snowshoes_final %>% 
+  group_by(year, sex) %>% 
+  summarize(mean = mean(weight))
+            
+```
+
 ## Visualizing
+
+```{r}
+ggplot(snowshoes_final, aes(x = sex, y = weight)) +
+  geom_jitter(size = 1,
+              alpha = 0.5,
+              aes(color = sex,
+                  pch = sex)) +
+    scale_color_manual(values = c("blue","orange"))
+
+```
+
+
+```{r}
+snowshoes_count_gg <- ggplot(data = snowshoes_count, aes(x = year, y = n, group = sex)) +
+  geom_line(aes(color = sex)) +
+  theme_minimal()
+
+
+snowshoes_count_gg 
+```
 
 
 -	One finalized HTML table (probably created using kable & kableExtra) containing summary statistics about the snowshoe hares (again, you pick which variables, and how you want to group/summarize them)
 
 ```{r}
-kable(state_table) %>% 
+
+snowshoes_table <- snowshoes_weigth %>% 
+  mutate("Mean weigth (kg)" = round(mean / 1e3, 2)) %>% 
+  rename("Year" = year) %>% 
+  mutate(sex = recode (sex, 
+                         `m`="Male",
+                         `f`="Female")) %>% 
+  select(-mean) 
+
+
+kable(snowshoes_table) %>% 
   kable_styling(bootstrap_options = "striped", 
-                full_width = FALSE) %>% 
-  add_header_above(c("", "2015 US commercial fisheries - top 5 states by value" = 2))
+                full_width = FALSE) 
 ```
 
 
